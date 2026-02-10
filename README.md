@@ -1,6 +1,6 @@
 # BuxBack - Roblox Cashback Browser Extension
 
-Earn up to **10% cashback** on Roblox catalog purchases. BuxBack leverages Roblox's affiliate system and passes the commission back to you.
+Earn **10-30% cashback** on Roblox catalog purchases. BuxBack leverages Roblox's affiliate system and passes the commission back to you.
 
 ## How It Works
 
@@ -22,9 +22,9 @@ Earn up to **10% cashback** on Roblox catalog purchases. BuxBack leverages Roblo
 
 | Item Type | Rate |
 |---|---|
-| 3D Assets (accessories, bodies, UGC clothing) | 10% |
-| Classic Clothing (shirts, pants, t-shirts) | 5% |
-| Game Passes | 5% |
+| 3D Assets (accessories, bodies, UGC clothing) | 10-30% |
+| Classic Clothing (shirts, pants, t-shirts) | 5-15% |
+| Game Passes | 5-15% |
 
 ## Installation
 

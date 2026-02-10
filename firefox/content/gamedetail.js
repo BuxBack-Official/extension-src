@@ -6,7 +6,16 @@
 (function() {
   'use strict';
 
-  const GAMEPASS_CASHBACK_RATE = 0.05;
+  // Rate fetched from API, this is a fallback default
+  let GAMEPASS_CASHBACK_RATE = 0.05;
+
+  // Load rates from storage (background script fetches from API)
+  browser.storage.local.get('rates').then((result) => {
+    if (result.rates) {
+      GAMEPASS_CASHBACK_RATE = result.rates.gamepass || GAMEPASS_CASHBACK_RATE;
+      console.log('[BuxBack] Gamepass rate loaded:', result.rates.gamepass);
+    }
+  });
   const GAME_LINK = "https://www.roblox.com/games/118219754091031/BuxBack-Roblox-Cash-Back";
 
   // Track processed game passes to avoid duplicates
@@ -104,7 +113,7 @@
               ` : ''}
               ${cashback ? `
                 <div class="buxback-price-row buxback-cashback-row">
-                  <span>Your Cashback (5%)</span>
+                  <span>Your Cashback (${Math.round(GAMEPASS_CASHBACK_RATE * 100)}%)</span>
                   <span class="buxback-cashback-value">+${cashback.toLocaleString()} Robux</span>
                 </div>
               ` : ''}

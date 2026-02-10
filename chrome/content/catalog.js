@@ -6,12 +6,20 @@
 (function() {
   'use strict';
 
-  // 3D Assets (bodies, heads, UGC clothing, accessories): 10% (40% affiliate)
-  // Classic clothing (shirts, pants, t-shirts): 5% (10% affiliate)
-  // Gamepasses: 5% (10% affiliate)
-  const CATALOG_CASHBACK_RATE = 0.10;
-  const CLASSIC_CLOTHING_CASHBACK_RATE = 0.05;
-  const GAMEPASS_CASHBACK_RATE = 0.05;
+  // Rates fetched from API, these are fallback defaults
+  let CATALOG_CASHBACK_RATE = 0.30;
+  let CLASSIC_CLOTHING_CASHBACK_RATE = 0.05;
+  let GAMEPASS_CASHBACK_RATE = 0.05;
+
+  // Load rates from storage (background script fetches from API)
+  chrome.storage.local.get('rates', (result) => {
+    if (result.rates) {
+      CATALOG_CASHBACK_RATE = result.rates.catalog || CATALOG_CASHBACK_RATE;
+      CLASSIC_CLOTHING_CASHBACK_RATE = result.rates.classic || CLASSIC_CLOTHING_CASHBACK_RATE;
+      GAMEPASS_CASHBACK_RATE = result.rates.gamepass || GAMEPASS_CASHBACK_RATE;
+      console.log('[BuxBack] Rates loaded:', result.rates);
+    }
+  });
 
   // Roblox asset type IDs for classic clothing
   const CLASSIC_CLOTHING_ASSET_TYPES = [2, 11, 12]; // T-Shirt, Shirt, Pants

@@ -4,6 +4,28 @@
  */
 
 const GAME_URL = "https://www.roblox.com/games/118219754091031/BuxBack-Roblox-Cash-Back";
+const RATES_API = "https://www.buxback.net/api/rates";
+
+const DEFAULT_RATES = { catalog: 0.30, classic: 0.05, gamepass: 0.05 };
+
+/**
+ * Fetch cashback rates from API and cache in storage
+ */
+async function fetchRates() {
+  try {
+    const res = await fetch(RATES_API);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const rates = await res.json();
+    await browser.storage.local.set({ rates });
+    console.log("[BuxBack] Rates updated:", rates);
+  } catch (err) {
+    console.warn("[BuxBack] Failed to fetch rates, using defaults:", err.message);
+    const { rates } = await browser.storage.local.get("rates");
+    if (!rates) {
+      await browser.storage.local.set({ rates: DEFAULT_RATES });
+    }
+  }
+}
 
 /**
  * Handle extension installation
@@ -21,7 +43,27 @@ browser.runtime.onInstalled.addListener((details) => {
       gameUrl: GAME_URL,
     });
   }
+
+  // Fetch rates on install/update
+  fetchRates();
+
+  // Refresh rates every 30 minutes
+  browser.alarms.create("refreshRates", { periodInMinutes: 30 });
 });
+
+/**
+ * Handle alarms
+ */
+browser.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === "refreshRates") {
+    fetchRates();
+  }
+});
+
+/**
+ * Also fetch rates on background script startup
+ */
+fetchRates();
 
 /**
  * Handle messages from content scripts

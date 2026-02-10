@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "BuxBack - Roblox Cashback",
   "version": "1.0.0",
-  "description": "Get up to 10% cashback on Roblox catalog purchases!",
+  "description": "Get 10-30% cashback on Roblox catalog purchases!",
   "browser_specific_settings": {
     "gecko": {
       "id": "buxback@buxback.com",
@@ -11,12 +11,14 @@
   },
   "permissions": [
     "storage",
-    "activeTab"
+    "activeTab",
+    "alarms"
   ],
   "host_permissions": [
     "https://www.roblox.com/*",
     "https://catalog.roblox.com/*",
-    "https://web.roblox.com/*"
+    "https://web.roblox.com/*",
+    "https://www.buxback.net/*"
   ],
   "background": {
     "scripts": ["background/background.js"]
