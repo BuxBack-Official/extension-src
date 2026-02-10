@@ -1,0 +1,63 @@
+{
+  "manifest_version": 3,
+  "name": "BuxBack - Roblox Cashback",
+  "version": "1.0.0",
+  "description": "Get up to 10% cashback on Roblox catalog purchases!",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "buxback@buxback.com",
+      "strict_min_version": "109.0"
+    }
+  },
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://www.roblox.com/*",
+    "https://catalog.roblox.com/*",
+    "https://web.roblox.com/*"
+  ],
+  "background": {
+    "scripts": ["background/background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.roblox.com/catalog",
+        "https://www.roblox.com/catalog/*",
+        "https://www.roblox.com/catalog?*",
+        "https://www.roblox.com/bundles/*",
+        "https://web.roblox.com/catalog",
+        "https://web.roblox.com/catalog/*",
+        "https://web.roblox.com/catalog?*",
+        "https://web.roblox.com/bundles/*"
+      ],
+      "js": ["content/catalog.js", "content/itempage.js"],
+      "css": ["content/styles.css"],
+      "run_at": "document_end"
+    },
+    {
+      "matches": [
+        "https://www.roblox.com/games/*",
+        "https://web.roblox.com/games/*"
+      ],
+      "js": ["content/gamedetail.js"],
+      "css": ["content/styles.css"],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}
