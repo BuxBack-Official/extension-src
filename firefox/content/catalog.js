@@ -6,18 +6,16 @@
 (function() {
   'use strict';
 
-  // Rates fetched from API, these are fallback defaults
+  // Catalog rate is variable (fetched from API), others are fixed at 5%
   let CATALOG_CASHBACK_RATE = 0.30;
-  let CLASSIC_CLOTHING_CASHBACK_RATE = 0.05;
-  let GAMEPASS_CASHBACK_RATE = 0.05;
+  const CLASSIC_CLOTHING_CASHBACK_RATE = 0.05;
+  const GAMEPASS_CASHBACK_RATE = 0.05;
 
-  // Load rates from storage (background script fetches from API)
+  // Load catalog rate from storage (background script fetches from API)
   browser.storage.local.get('rates').then((result) => {
-    if (result.rates) {
-      CATALOG_CASHBACK_RATE = result.rates.catalog || CATALOG_CASHBACK_RATE;
-      CLASSIC_CLOTHING_CASHBACK_RATE = result.rates.classic || CLASSIC_CLOTHING_CASHBACK_RATE;
-      GAMEPASS_CASHBACK_RATE = result.rates.gamepass || GAMEPASS_CASHBACK_RATE;
-      console.log('[BuxBack] Rates loaded:', result.rates);
+    if (result.rates && result.rates.catalog) {
+      CATALOG_CASHBACK_RATE = result.rates.catalog;
+      console.log('[BuxBack] Catalog rate loaded:', result.rates.catalog);
     }
   });
 
