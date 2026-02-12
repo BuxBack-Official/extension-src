@@ -9,6 +9,12 @@
   const GAMEPASS_CASHBACK_RATE = 0.05;
   const GAME_LINK = "https://www.roblox.com/games/118219754091031/BuxBack-Roblox-Cash-Back";
 
+  function escapeHTML(str) {
+    const el = document.createElement('span');
+    el.textContent = str;
+    return el.innerHTML;
+  }
+
   // Track processed game passes to avoid duplicates
   const processedPasses = new Set();
 
@@ -82,6 +88,9 @@
 
     const cashback = price ? Math.floor(price * GAMEPASS_CASHBACK_RATE) : 0;
 
+    const safePassName = escapeHTML(passName);
+    const safePassId = escapeHTML(passId);
+
     const modal = document.createElement('div');
     modal.id = 'buxback-modal';
     modal.innerHTML = `
@@ -93,7 +102,7 @@
             <h2>Buy & Earn Cashback</h2>
           </div>
           <div class="buxback-modal-body">
-            <p class="buxback-item-name">${passName}</p>
+            <p class="buxback-item-name">${safePassName}</p>
 
             <div class="buxback-price-summary">
               ${price ? `
@@ -119,8 +128,8 @@
             <div class="buxback-id-section">
               <label>Game Pass ID</label>
               <div class="buxback-copy-row">
-                <input type="text" value="${passId}" readonly id="buxback-item-id">
-                <button class="buxback-copy-btn" data-copy="${passId}">Copy</button>
+                <input type="text" value="${safePassId}" readonly id="buxback-item-id">
+                <button class="buxback-copy-btn" data-copy="${safePassId}">Copy</button>
               </div>
             </div>
 

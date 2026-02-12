@@ -2,8 +2,7 @@
  * BuxBack Onboarding Page (Firefox)
  */
 
-// For development, use localhost. For production, use your deployed URL
-const API_BASE_URL = "http://localhost:3000"; // Change to https://buxback.vercel.app for production
+const API_BASE_URL = "https://www.buxback.net";
 
 // Handle Get Started button
 document.getElementById("get-started-btn").addEventListener("click", (e) => {

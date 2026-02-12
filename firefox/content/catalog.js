@@ -11,12 +11,14 @@
   const CLASSIC_CLOTHING_CASHBACK_RATE = 0.05;
   const GAMEPASS_CASHBACK_RATE = 0.05;
 
-  // Load catalog rate from storage (background script fetches from API)
-  browser.storage.local.get('rates').then((result) => {
-    if (result.rates && result.rates.catalog) {
-      CATALOG_CASHBACK_RATE = result.rates.catalog;
-      console.log('[BuxBack] Catalog rate loaded:', result.rates.catalog);
+  // Fetch fresh rates from API via background script
+  browser.runtime.sendMessage({ type: "FETCH_RATES" }).then((response) => {
+    if (response?.rates?.catalog) {
+      CATALOG_CASHBACK_RATE = response.rates.catalog;
+      console.log('[BuxBack] Catalog rate loaded:', response.rates.catalog);
     }
+  }).catch(() => {
+    console.log('[BuxBack] Background not ready, using default rate');
   });
 
   // Roblox asset type IDs for classic clothing
@@ -131,16 +133,13 @@ function processThumbnail(img) {
 
   const { container, isGamePass } = result;
 
-  // Already processed?
-  if (container.dataset.buxback) return false;
-  container.dataset.buxback = "1";
-
+  // Already has a badge?
   if (container.querySelector('.buxback-badge')) return false;
 
   // Skip excluded items (limiteds, free, off-sale)
   if (shouldExclude(container)) return false;
 
-  // Find price
+  // Find price - don't mark as processed yet so we retry when price loads
   const price = findPrice(container);
   if (!price) return false;
 

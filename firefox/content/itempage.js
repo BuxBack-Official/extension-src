@@ -11,15 +11,23 @@
   const CLASSIC_CLOTHING_CASHBACK_RATE = 0.05;
   const GAMEPASS_CASHBACK_RATE = 0.05;
 
-  // Load catalog rate from storage (background script fetches from API)
-  browser.storage.local.get('rates').then((result) => {
-    if (result.rates && result.rates.catalog) {
-      CATALOG_CASHBACK_RATE = result.rates.catalog;
-      console.log('[BuxBack] Catalog rate loaded:', result.rates.catalog);
+  // Fetch fresh rates from API via background script
+  browser.runtime.sendMessage({ type: "FETCH_RATES" }).then((response) => {
+    if (response?.rates?.catalog) {
+      CATALOG_CASHBACK_RATE = response.rates.catalog;
+      console.log('[BuxBack] Catalog rate loaded:', response.rates.catalog);
     }
+  }).catch(() => {
+    console.log('[BuxBack] Background not ready, using default rate');
   });
   const GAME_LINK = "https://www.roblox.com/games/118219754091031/BuxBack-Roblox-Cash-Back";
   const PLACE_ID = "118219754091031";
+
+  function escapeHTML(str) {
+    const el = document.createElement('span');
+    el.textContent = str;
+    return el.innerHTML;
+  }
 
 /**
  * Get item type for LaunchData
@@ -162,6 +170,9 @@ function createModal() {
   const itemType = getItemType();
   const deepLink = generateRobloxDeepLink(itemId, itemType);
 
+  const safeItemName = escapeHTML(itemName);
+  const safeItemId = escapeHTML(itemId);
+
   const modal = document.createElement('div');
   modal.id = 'buxback-modal';
   modal.innerHTML = `
@@ -173,7 +184,7 @@ function createModal() {
           <h2>Buy & Earn Cashback</h2>
         </div>
         <div class="buxback-modal-body">
-          <p class="buxback-item-name">${itemName}</p>
+          <p class="buxback-item-name">${safeItemName}</p>
 
           <div class="buxback-price-summary">
             ${price ? `
@@ -207,8 +218,8 @@ function createModal() {
           <div class="buxback-fallback">
             <p class="buxback-fallback-label">If the game doesn't open, copy the Item ID:</p>
             <div class="buxback-copy-row">
-              <input type="text" value="${itemId}" readonly id="buxback-item-id">
-              <button class="buxback-copy-btn" data-copy="${itemId}">Copy</button>
+              <input type="text" value="${safeItemId}" readonly id="buxback-item-id">
+              <button class="buxback-copy-btn" data-copy="${safeItemId}">Copy</button>
             </div>
             <a href="${GAME_LINK}" target="_blank" class="buxback-fallback-link">
               Open game manually →

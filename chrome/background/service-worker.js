@@ -46,29 +46,21 @@ chrome.runtime.onInstalled.addListener((details) => {
 
   // Fetch rates on install/update
   fetchRates();
-
-  // Refresh rates every 30 minutes
-  chrome.alarms.create("refreshRates", { periodInMinutes: 30 });
 });
-
-/**
- * Handle alarms
- */
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === "refreshRates") {
-    fetchRates();
-  }
-});
-
-/**
- * Also fetch rates on service worker startup
- */
-fetchRates();
 
 /**
  * Handle messages from content scripts
  */
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === "FETCH_RATES") {
+    fetchRates().then(() => {
+      chrome.storage.local.get("rates", (result) => {
+        sendResponse({ rates: result.rates || DEFAULT_RATES });
+      });
+    });
+    return true;
+  }
+
   if (message.type === "GET_GAME_URL") {
     sendResponse({ gameUrl: GAME_URL });
     return true;

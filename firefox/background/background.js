@@ -46,29 +46,21 @@ browser.runtime.onInstalled.addListener((details) => {
 
   // Fetch rates on install/update
   fetchRates();
-
-  // Refresh rates every 30 minutes
-  browser.alarms.create("refreshRates", { periodInMinutes: 30 });
 });
-
-/**
- * Handle alarms
- */
-browser.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === "refreshRates") {
-    fetchRates();
-  }
-});
-
-/**
- * Also fetch rates on background script startup
- */
-fetchRates();
 
 /**
  * Handle messages from content scripts
  */
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === "FETCH_RATES") {
+    fetchRates().then(() => {
+      browser.storage.local.get("rates").then((result) => {
+        sendResponse({ rates: result.rates || DEFAULT_RATES });
+      });
+    });
+    return true;
+  }
+
   if (message.type === "GET_GAME_URL") {
     sendResponse({ gameUrl: GAME_URL });
     return true;

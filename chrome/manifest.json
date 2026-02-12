@@ -3,10 +3,10 @@
   "name": "BuxBack - Roblox Cashback",
   "version": "1.0.0",
   "description": "Get 10-30% cashback on Roblox catalog purchases!",
+  "author": { "email": "support@buxback.net" },
   "permissions": [
     "storage",
-    "activeTab",
-    "alarms"
+    "activeTab"
   ],
   "host_permissions": [
     "https://www.roblox.com/*",
