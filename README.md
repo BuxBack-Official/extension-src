@@ -1,6 +1,6 @@
 # BuxBack - Roblox Cashback Browser Extension
 
-Earn **10-30% cashback** on Roblox catalog purchases. BuxBack leverages Roblox's affiliate system and passes the commission back to you.
+Earn **up to 30% cashback** on Roblox catalog purchases. BuxBack uses Roblox's affiliate system and passes the commission back to you.
 
 ## How It Works
 
@@ -12,71 +12,72 @@ Earn **10-30% cashback** on Roblox catalog purchases. BuxBack leverages Roblox's
 
 ## Features
 
-- **Catalog badges** — See potential cashback on every item while browsing
-- **One-click purchasing** — "Buy with BuxBack" button on item detail pages
-- **Game pass support** — Earn cashback on game passes too
-- **Price breakdown modal** — View price, cashback amount, and effective cost before buying
-- **Onboarding page** — Get started quickly with a guided setup
+- **Catalog badges**: see potential cashback on every item while browsing
+- **One-click purchasing**: "Buy with BuxBack" button on item detail pages
+- **Game pass support**: earn cashback on game passes too
+- **Price breakdown modal**: view price, cashback amount, and effective cost before buying
+- **Onboarding page**: get started quickly with a guided setup
 
 ## Cashback Rates
 
 | Item Type | Rate |
 |---|---|
-| 3D Assets (accessories, bodies, UGC clothing) | 10-30% |
-| Classic Clothing (shirts, pants, t-shirts) | 5-15% |
-| Game Passes | 5-15% |
+| 3D Assets (accessories, bodies, UGC clothing) | 30% |
+| Classic Clothing (shirts, pants, t-shirts) | 5% |
+| Game Passes | 5% |
+
+Rates are fetched live from BuxBack, so the extension always shows the current rate.
 
 ## Installation
 
-### Chrome
+Install from the Chrome Web Store or Firefox Add-ons, or grab the zips from the [Releases](../../releases) page.
 
-1. Download or clone this repository
-2. Go to `chrome://extensions/`
-3. Enable **Developer mode** (top right)
-4. Click **Load unpacked**
-5. Select the `chrome/` folder
+### Build from source
 
-### Firefox
+Requires Node.js 18+. No dependencies.
 
-1. Download or clone this repository
-2. Go to `about:debugging#/runtime/this-firefox`
-3. Click **Load Temporary Add-on**
-4. Select `firefox/manifest.json`
+```sh
+node build.mjs
+```
+
+This creates `dist/chrome/` and `dist/firefox/`.
+
+- **Chrome:** `chrome://extensions/` → enable Developer mode → Load unpacked → select `dist/chrome`
+- **Firefox:** `about:debugging#/runtime/this-firefox` → Load Temporary Add-on → select `dist/firefox/manifest.json`
 
 ## Project Structure
 
 ```
-├── chrome/              # Chrome extension (Manifest V3)
-│   ├── background/      # Service worker
-│   ├── content/         # Content scripts + styles
-│   ├── icons/           # Extension icons
-│   ├── onboarding/      # First-install onboarding page
-│   ├── popup/           # Extension popup UI
-│   └── manifest.json
-│
-├── firefox/             # Firefox extension (Manifest V3)
-│   ├── background/      # Background script
-│   ├── content/         # Content scripts + styles
-│   ├── icons/           # Extension icons
-│   ├── onboarding/      # First-install onboarding page
-│   ├── popup/           # Extension popup UI
-│   └── manifest.json
+src/                 # Shared extension code for every browser
+  background/        # Background script / service worker
+  content/           # Content scripts + styles injected on Roblox pages
+  icons/
+  onboarding/        # First-install onboarding page
+  popup/             # Toolbar popup
+  manifest.json      # Shared manifest fields
+browsers/
+  chrome.json        # Chrome-only manifest fields
+  firefox.json       # Firefox-only manifest fields
+build.mjs            # Builds dist/<browser> from src + browsers/<browser>.json
 ```
 
 ## Tech Stack
 
-- Vanilla JavaScript — no frameworks or build tools required
-- Chrome Extensions API / Firefox WebExtensions API (Manifest V3)
-- Roblox deep linking for seamless in-game purchases
+- Vanilla JavaScript, no frameworks or dependencies
+- WebExtensions API (Manifest V3), one codebase for Chrome and Firefox
+- Roblox deep linking for in-game purchases
 
 ## Permissions
 
 | Permission | Reason |
 |---|---|
-| `storage` | Store install data and game URL |
-| `activeTab` | Detect the current tab (Chrome) |
-| Host access to `roblox.com` | Inject cashback UI on Roblox pages |
+| `storage` | Cache cashback rates and install data |
+| `webNavigation` | Detect page changes on Roblox (it's a single-page app) |
+| `scripting` | Re-inject the cashback UI after those page changes |
+| Host access to `roblox.com` | Show cashback UI on Roblox pages |
 
 ## Why Open Source?
 
-This extension is open source for **transparency**. You can inspect every line of code to verify that BuxBack only does what it claims — inject cashback UI on Roblox pages and route purchases through the affiliate system. No tracking, no data harvesting, no hidden behavior.
+This extension is open source for **transparency**. You can inspect every line of code to verify that BuxBack only does what it claims: show cashback UI on Roblox pages and route purchases through the affiliate system. No tracking, no data harvesting, no hidden behavior.
+
+Every release on the Releases page is built automatically from the source in this repo.

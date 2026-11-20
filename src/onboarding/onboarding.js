@@ -1,8 +1,8 @@
 /**
- * BuxBack Onboarding Page (Firefox)
+ * BuxBack Onboarding Page
  */
 
-const API_BASE_URL = "https://www.buxback.net";
+const API_BASE_URL = "https://buxback.net";
 
 // Handle Get Started button
 document.getElementById("get-started-btn").addEventListener("click", (e) => {

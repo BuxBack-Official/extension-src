@@ -1,33 +1,45 @@
 /**
- * BuxBack Content Script - Item Detail Page (Firefox)
+ * BuxBack Content Script - Item Detail Page
  * Adds cashback button and modal on individual item pages
  */
 
 (function() {
   'use strict';
 
-  // Catalog rate is variable (fetched from API), others are fixed at 5%
-  let CATALOG_CASHBACK_RATE = 0.30;
-  const CLASSIC_CLOTHING_CASHBACK_RATE = 0.05;
-  const GAMEPASS_CASHBACK_RATE = 0.05;
+  // Prevent double initialization from programmatic + declarative injection
+  if (window.__buxbackItempageLoaded) return;
+  window.__buxbackItempageLoaded = true;
 
-  // Fetch fresh rates from API via background script
-  browser.runtime.sendMessage({ type: "FETCH_RATES" }).then((response) => {
-    if (response?.rates?.catalog) {
-      CATALOG_CASHBACK_RATE = response.rates.catalog;
-      console.log('[BuxBack] Catalog rate loaded:', response.rates.catalog);
+  // Default rates (overridden by API fetch)
+  let CATALOG_CASHBACK_RATE = 0.30;
+  let CLASSIC_CLOTHING_CASHBACK_RATE = 0.05;
+  let GAMEPASS_CASHBACK_RATE = 0.05;
+
+  // Fetch live rates from API with storage cache (5 min TTL)
+  async function loadRates() {
+    try {
+      const cached = await chrome.storage.local.get(['buxback_rates', 'buxback_rates_ts']);
+      if (cached.buxback_rates && cached.buxback_rates_ts && Date.now() - cached.buxback_rates_ts < 300000) {
+        CATALOG_CASHBACK_RATE = cached.buxback_rates.catalog || 0.30;
+        CLASSIC_CLOTHING_CASHBACK_RATE = cached.buxback_rates.classic || 0.05;
+        GAMEPASS_CASHBACK_RATE = cached.buxback_rates.gamepass || 0.05;
+        return;
+      }
+      const res = await fetch('https://buxback.net/api/rates');
+      if (res.ok) {
+        const data = await res.json();
+        CATALOG_CASHBACK_RATE = data.catalog || 0.30;
+        CLASSIC_CLOTHING_CASHBACK_RATE = data.classic || 0.05;
+        GAMEPASS_CASHBACK_RATE = data.gamepass || 0.05;
+        await chrome.storage.local.set({ buxback_rates: data, buxback_rates_ts: Date.now() });
+      }
+    } catch (e) {
+      console.log('[BuxBack] Using default rates');
     }
-  }).catch(() => {
-    console.log('[BuxBack] Background not ready, using default rate');
-  });
+  }
+  loadRates();
   const GAME_LINK = "https://www.roblox.com/games/118219754091031/BuxBack-Roblox-Cash-Back";
   const PLACE_ID = "118219754091031";
-
-  function escapeHTML(str) {
-    const el = document.createElement('span');
-    el.textContent = str;
-    return el.innerHTML;
-  }
 
 /**
  * Get item type for LaunchData
@@ -170,86 +182,148 @@ function createModal() {
   const itemType = getItemType();
   const deepLink = generateRobloxDeepLink(itemId, itemType);
 
-  const safeItemName = escapeHTML(itemName);
-  const safeItemId = escapeHTML(itemId);
-
   const modal = document.createElement('div');
   modal.id = 'buxback-modal';
-  modal.innerHTML = `
-    <div class="buxback-modal-overlay">
-      <div class="buxback-modal-content">
-        <button class="buxback-modal-close">&times;</button>
-        <div class="buxback-modal-header">
-          <div class="buxback-logo">BuxBack</div>
-          <h2>Buy & Earn Cashback</h2>
-        </div>
-        <div class="buxback-modal-body">
-          <p class="buxback-item-name">${safeItemName}</p>
 
-          <div class="buxback-price-summary">
-            ${price ? `
-              <div class="buxback-price-row">
-                <span>Price</span>
-                <span class="buxback-price-value">${price.toLocaleString()} Robux</span>
-              </div>
-            ` : ''}
-            ${cashback ? `
-              <div class="buxback-price-row buxback-cashback-row">
-                <span>Your Cashback</span>
-                <span class="buxback-cashback-value">+${cashback.toLocaleString()} Robux</span>
-              </div>
-            ` : ''}
-            ${price && cashback ? `
-              <div class="buxback-price-row buxback-total-row">
-                <span>You Actually Pay</span>
-                <span class="buxback-total-value">${(price - cashback).toLocaleString()} Robux</span>
-              </div>
-            ` : ''}
-          </div>
+  const overlay = document.createElement('div');
+  overlay.className = 'buxback-modal-overlay';
 
-          <div class="buxback-instructions">
-            <p><strong>Click below to open the game with this item ready to buy:</strong></p>
-          </div>
+  const content = document.createElement('div');
+  content.className = 'buxback-modal-content';
 
-          <a href="${deepLink}" class="buxback-game-btn buxback-deeplink-btn">
-            Open in BuxBack Game
-          </a>
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'buxback-modal-close';
+  closeBtn.textContent = '\u00D7';
+  content.appendChild(closeBtn);
 
-          <div class="buxback-fallback">
-            <p class="buxback-fallback-label">If the game doesn't open, copy the Item ID:</p>
-            <div class="buxback-copy-row">
-              <input type="text" value="${safeItemId}" readonly id="buxback-item-id">
-              <button class="buxback-copy-btn" data-copy="${safeItemId}">Copy</button>
-            </div>
-            <a href="${GAME_LINK}" target="_blank" class="buxback-fallback-link">
-              Open game manually →
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
+  const header = document.createElement('div');
+  header.className = 'buxback-modal-header';
+  const logo = document.createElement('div');
+  logo.className = 'buxback-logo';
+  logo.textContent = 'BuxBack';
+  header.appendChild(logo);
+  const h2 = document.createElement('h2');
+  h2.textContent = 'Buy & Earn Cashback';
+  header.appendChild(h2);
+  content.appendChild(header);
+
+  const body = document.createElement('div');
+  body.className = 'buxback-modal-body';
+
+  const itemNameEl = document.createElement('p');
+  itemNameEl.className = 'buxback-item-name';
+  itemNameEl.textContent = itemName;
+  body.appendChild(itemNameEl);
+
+  const priceSummary = document.createElement('div');
+  priceSummary.className = 'buxback-price-summary';
+
+  if (price) {
+    const row = document.createElement('div');
+    row.className = 'buxback-price-row';
+    const label = document.createElement('span');
+    label.textContent = 'Price';
+    const val = document.createElement('span');
+    val.className = 'buxback-price-value';
+    val.textContent = price.toLocaleString() + ' Robux';
+    row.appendChild(label);
+    row.appendChild(val);
+    priceSummary.appendChild(row);
+  }
+
+  if (cashback) {
+    const row = document.createElement('div');
+    row.className = 'buxback-price-row buxback-cashback-row';
+    const label = document.createElement('span');
+    label.textContent = 'Your Cashback';
+    const val = document.createElement('span');
+    val.className = 'buxback-cashback-value';
+    val.textContent = '+' + cashback.toLocaleString() + ' Robux';
+    row.appendChild(label);
+    row.appendChild(val);
+    priceSummary.appendChild(row);
+  }
+
+  if (price && cashback) {
+    const row = document.createElement('div');
+    row.className = 'buxback-price-row buxback-total-row';
+    const label = document.createElement('span');
+    label.textContent = 'You Actually Pay';
+    const val = document.createElement('span');
+    val.className = 'buxback-total-value';
+    val.textContent = (price - cashback).toLocaleString() + ' Robux';
+    row.appendChild(label);
+    row.appendChild(val);
+    priceSummary.appendChild(row);
+  }
+
+  body.appendChild(priceSummary);
+
+  const instructions = document.createElement('div');
+  instructions.className = 'buxback-instructions';
+  const instrP = document.createElement('p');
+  const instrStrong = document.createElement('strong');
+  instrStrong.textContent = 'Click below to open the game with this item ready to buy:';
+  instrP.appendChild(instrStrong);
+  instructions.appendChild(instrP);
+  body.appendChild(instructions);
+
+  const deepLinkBtn = document.createElement('a');
+  deepLinkBtn.href = deepLink;
+  deepLinkBtn.className = 'buxback-game-btn buxback-deeplink-btn';
+  deepLinkBtn.textContent = 'Open in BuxBack Game';
+  body.appendChild(deepLinkBtn);
+
+  const fallback = document.createElement('div');
+  fallback.className = 'buxback-fallback';
+
+  const fallbackLabel = document.createElement('p');
+  fallbackLabel.className = 'buxback-fallback-label';
+  fallbackLabel.textContent = "If the game doesn't open, copy the Item ID:";
+  fallback.appendChild(fallbackLabel);
+
+  const copyRow = document.createElement('div');
+  copyRow.className = 'buxback-copy-row';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = itemId;
+  input.readOnly = true;
+  input.id = 'buxback-item-id';
+  copyRow.appendChild(input);
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'buxback-copy-btn';
+  copyBtn.dataset.copy = itemId;
+  copyBtn.textContent = 'Copy';
+  copyRow.appendChild(copyBtn);
+  fallback.appendChild(copyRow);
+
+  const fallbackLink = document.createElement('a');
+  fallbackLink.href = GAME_LINK;
+  fallbackLink.target = '_blank';
+  fallbackLink.className = 'buxback-fallback-link';
+  fallbackLink.textContent = 'Open game manually \u2192';
+  fallback.appendChild(fallbackLink);
+
+  body.appendChild(fallback);
+  content.appendChild(body);
+  overlay.appendChild(content);
+  modal.appendChild(overlay);
 
   document.body.appendChild(modal);
 
   // Close on overlay click
-  modal.querySelector('.buxback-modal-overlay').addEventListener('click', (e) => {
-    if (e.target.classList.contains('buxback-modal-overlay')) {
-      modal.remove();
-    }
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) modal.remove();
   });
 
   // Close button
-  modal.querySelector('.buxback-modal-close').addEventListener('click', () => {
-    modal.remove();
-  });
+  closeBtn.addEventListener('click', () => modal.remove());
 
   // Copy button
-  modal.querySelector('.buxback-copy-btn').addEventListener('click', (e) => {
-    const id = e.target.dataset.copy;
-    navigator.clipboard.writeText(id).then(() => {
-      e.target.textContent = 'Copied!';
-      setTimeout(() => e.target.textContent = 'Copy', 2000);
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(itemId).then(() => {
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => copyBtn.textContent = 'Copy', 2000);
     });
   });
 
@@ -306,12 +380,19 @@ function createCashbackButton() {
   btn.id = 'buxback-btn';
   btn.className = 'buxback-buy-btn';
   btn.dataset.itemId = itemId; // Track which item this button is for
-  btn.innerHTML = `
-    <span class="buxback-btn-content">
-      <span class="buxback-btn-main">Buy with BuxBack</span>
-      ${cashback ? `<span class="buxback-btn-cashback">+${cashback.toLocaleString()} Robux back</span>` : ''}
-    </span>
-  `;
+  const btnContent = document.createElement('span');
+  btnContent.className = 'buxback-btn-content';
+  const btnMain = document.createElement('span');
+  btnMain.className = 'buxback-btn-main';
+  btnMain.textContent = 'Buy with BuxBack';
+  btnContent.appendChild(btnMain);
+  if (cashback) {
+    const btnCashback = document.createElement('span');
+    btnCashback.className = 'buxback-btn-cashback';
+    btnCashback.textContent = '+' + cashback.toLocaleString() + ' Robux back';
+    btnContent.appendChild(btnCashback);
+  }
+  btn.appendChild(btnContent);
 
   btn.addEventListener('click', createModal);
 

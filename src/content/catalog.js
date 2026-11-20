@@ -6,18 +6,38 @@
 (function() {
   'use strict';
 
-  // Catalog rate is variable (fetched from API), others are fixed at 5%
-  let CATALOG_CASHBACK_RATE = 0.30;
-  const CLASSIC_CLOTHING_CASHBACK_RATE = 0.05;
-  const GAMEPASS_CASHBACK_RATE = 0.05;
+  // Prevent double initialization from programmatic + declarative injection
+  if (window.__buxbackCatalogLoaded) return;
+  window.__buxbackCatalogLoaded = true;
 
-  // Fetch fresh rates from API via background script
-  chrome.runtime.sendMessage({ type: "FETCH_RATES" }, (response) => {
-    if (response?.rates?.catalog) {
-      CATALOG_CASHBACK_RATE = response.rates.catalog;
-      console.log('[BuxBack] Catalog rate loaded:', response.rates.catalog);
+  // Default rates (overridden by API fetch)
+  let CATALOG_CASHBACK_RATE = 0.30;
+  let CLASSIC_CLOTHING_CASHBACK_RATE = 0.05;
+  let GAMEPASS_CASHBACK_RATE = 0.05;
+
+  // Fetch live rates from API with storage cache (5 min TTL)
+  async function loadRates() {
+    try {
+      const cached = await chrome.storage.local.get(['buxback_rates', 'buxback_rates_ts']);
+      if (cached.buxback_rates && cached.buxback_rates_ts && Date.now() - cached.buxback_rates_ts < 300000) {
+        CATALOG_CASHBACK_RATE = cached.buxback_rates.catalog || 0.30;
+        CLASSIC_CLOTHING_CASHBACK_RATE = cached.buxback_rates.classic || 0.05;
+        GAMEPASS_CASHBACK_RATE = cached.buxback_rates.gamepass || 0.05;
+        return;
+      }
+      const res = await fetch('https://buxback.net/api/rates');
+      if (res.ok) {
+        const data = await res.json();
+        CATALOG_CASHBACK_RATE = data.catalog || 0.30;
+        CLASSIC_CLOTHING_CASHBACK_RATE = data.classic || 0.05;
+        GAMEPASS_CASHBACK_RATE = data.gamepass || 0.05;
+        await chrome.storage.local.set({ buxback_rates: data, buxback_rates_ts: Date.now() });
+      }
+    } catch (e) {
+      console.log('[BuxBack] Using default rates');
     }
-  });
+  }
+  loadRates();
 
   // Roblox asset type IDs for classic clothing
   const CLASSIC_CLOTHING_ASSET_TYPES = [2, 11, 12]; // T-Shirt, Shirt, Pants
@@ -46,7 +66,10 @@ function formatNumber(num) {
 function createCashbackBadge(cashbackAmount) {
   const badge = document.createElement("div");
   badge.className = "buxback-badge";
-  badge.innerHTML = `<span>+${formatNumber(cashbackAmount)}</span> back`;
+  const span = document.createElement("span");
+  span.textContent = "+" + formatNumber(cashbackAmount);
+  badge.appendChild(span);
+  badge.appendChild(document.createTextNode(" back"));
   return badge;
 }
 
@@ -131,13 +154,16 @@ function processThumbnail(img) {
 
   const { container, isGamePass } = result;
 
-  // Already has a badge?
+  // Already processed?
+  if (container.dataset.buxback) return false;
+  container.dataset.buxback = "1";
+
   if (container.querySelector('.buxback-badge')) return false;
 
   // Skip excluded items (limiteds, free, off-sale)
   if (shouldExclude(container)) return false;
 
-  // Find price - don't mark as processed yet so we retry when price loads
+  // Find price
   const price = findPrice(container);
   if (!price) return false;
 
